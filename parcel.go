@@ -2,8 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
-	"fmt"
 	// "golang.org/x/crypto/openpgp/errors"
 )
 
@@ -24,14 +22,12 @@ func (s ParcelStore) Add(p Parcel) (int, error) {
 		sql.Named("created_at", p.CreatedAt),
 	)
 	if err != nil {
-		fmt.Println(err)
 		return 0, err
 	}
 
 	// получаем идентификатор добавленной записи если это возможно.
 	id, err := res.LastInsertId()
 	if err != nil {
-		fmt.Println(err)
 		return 0, err
 	}
 	// верните идентификатор последней добавленной записи
@@ -47,8 +43,8 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 	p := Parcel{}
 	err := row.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
 	if err != nil {
-		fmt.Println(err)
-		return p, err
+		ep := Parcel{}
+		return ep, err
 	}
 
 	return p, nil
@@ -58,12 +54,12 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	// реализуйте чтение строк из таблицы parcel по заданному client
 	// здесь из таблицы может вернуться несколько строк
 	var res []Parcel
+	var eres []Parcel // пустой слайс структуры ю возвращаем его при ошибках.
 
 	rows, err := s.db.Query("SELECT number,client,status,address,created_at FROM parcel WHERE client=:client",
 		sql.Named("client", client))
 	if err != nil {
-		fmt.Println(err)
-		return res, err
+		return eres, err // в данном случак одинакоко что вернуть res или eres, поскольку оба пока пусты.
 	}
 	defer rows.Close()
 	// заполните срез Parcel данными из таблицы
@@ -75,10 +71,13 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 		err := rows.Scan(&row_res.Number, &row_res.Client, &row_res.Status, &row_res.Address, &row_res.CreatedAt)
 
 		if err != nil {
-			fmt.Println(err)
-			return res, err
+			return eres, err
 		}
 		res = append(res, row_res)
+	}
+	// http://go-database-sql.org/errors.html  В модуле есть, правда без акцента и/или объяснения для чего.
+	if err := rows.Err(); err != nil {
+		return eres, err
 	}
 
 	return res, nil
@@ -91,7 +90,6 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 		sql.Named("number", number),
 	)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -101,28 +99,26 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 func (s ParcelStore) SetAddress(number int, address string) error {
 	// реализуйте обновление адреса в таблице parcel
 	// менять адрес можно только если значение статуса registered
+	/*
+		row := s.db.QueryRow("SELECT status FROM parcel WHERE number=:number", sql.Named("number", number))
 
-	row := s.db.QueryRow("SELECT status FROM parcel WHERE number=:number", sql.Named("number", number))
+		var status string
+		err := row.Scan(&status)
+		if err != nil {
+			return err
+		}
 
-	var status string
-	err := row.Scan(&status)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	if status != ParcelStatusRegistered {
-		err := errors.New("Unexpected status of shipment")
-		fmt.Println(err)
-		return err
-	}
-
-	_, err = s.db.Exec("UPDATE parcel SET address=:address WHERE number=:number",
+		if status != ParcelStatusRegistered {
+			err := errors.New("Unexpected status of shipment")
+			return err
+		}
+	*/
+	_, err := s.db.Exec("UPDATE parcel SET address=:address WHERE number=:number AND status=:status",
 		sql.Named("address", address),
 		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered),
 	)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -130,27 +126,28 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 }
 
 func (s ParcelStore) Delete(number int) error {
-	fmt.Println("fuunc Delete", number)
 	// реализуйте удаление строки из таблицы parcel
 	// удалять строку можно только если значение статуса registered
-	row := s.db.QueryRow("SELECT status FROM parcel WHERE number=:number", sql.Named("number", number))
+	/*
+		row := s.db.QueryRow("SELECT status FROM parcel WHERE number=:number", sql.Named("number", number))
 
-	var status string
-	err := row.Scan(&status)
+		var status string
+		err := row.Scan(&status)
+		if err != nil {
+			return err
+		}
+		//fmt.Println(status)
+		if status != ParcelStatusRegistered {
+			err := errors.New("Unexpected status of shipment")
+			return err
+		}
+		//fmt.Println("Run Delete")
+	*/
+	_, err := s.db.Exec("DELETE FROM parcel WHERE number=:number AND status=:status",
+		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered),
+	)
 	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	fmt.Println(status)
-	if status != ParcelStatusRegistered {
-		err := errors.New("Unexpected status of shipment")
-		fmt.Println(err)
-		return err
-	}
-	fmt.Println("Run Delete")
-	_, err = s.db.Exec("DELETE FROM parcel WHERE number=:number", sql.Named("number", number))
-	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
