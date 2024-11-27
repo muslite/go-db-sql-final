@@ -33,9 +33,8 @@ func getTestParcel() Parcel {
 func TestAddGetDelete(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
+
 	defer db.Close()
 
 	store := NewParcelStore(db)
@@ -74,9 +73,8 @@ func TestAddGetDelete(t *testing.T) {
 func TestSetAddress(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
+
 	defer db.Close()
 
 	store := NewParcelStore(db)
@@ -106,9 +104,8 @@ func TestSetAddress(t *testing.T) {
 func TestSetStatus(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
+
 	defer db.Close()
 
 	store := NewParcelStore(db)
@@ -137,9 +134,8 @@ func TestSetStatus(t *testing.T) {
 func TestGetByClient(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
+
 	defer db.Close()
 	store := NewParcelStore(db)
 
@@ -176,6 +172,7 @@ func TestGetByClient(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, parcels, len(storedParcels))
 
+	// storedParcels[2].Client = 88
 	// check
 	for _, parcel := range storedParcels {
 		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
@@ -188,5 +185,11 @@ func TestGetByClient(t *testing.T) {
 		   		assert.Equal(t, parcelMap[id].Status, parcel.Status)
 		   		assert.Equal(t, parcelMap[id].CreatedAt, parcel.CreatedAt) */
 		assert.Equal(t, parcelMap[parcel.Number], parcel)
+		//fmt.Println(parcelMap[parcel.Number], parcel)
 	}
+
+	// все то что выше можно заменить одной проверкой. сравнив два слайса ???
+	// assert.InDeltaMapValues(t, storedParcels, parcels, 0.0, "")
+	// тут можно лучше в testify есть функции для работы с массивами - можно обойтись без цикла и мапы тут и все проверить одним assert-ом
+
 }
